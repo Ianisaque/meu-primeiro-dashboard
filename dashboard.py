@@ -1,76 +1,76 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px  # Importando o Plotly Express
 
 # 1. Configuração da página da Web
-st.set_page_config(page_title="Dashboard Corporativo", layout="wide")
+st.set_page_config(page_title="Dashboard Interativo Plotly", layout="wide")
 
-st.title("📊 Painel de Análise Financeira e de Vendas")
-st.write("Insira sua planilha abaixo para rodar as análises automatizadas de lucro e imposto.")
+st.title("📊 Dashboard Interativo de Dados (Plotly)")
+st.write("Gráficos modernos que atualizam em tempo real e reagem ao mouse.")
 
-# Caixa de upload que aceita CSV e Excel
+# Caixa de upload para CSV ou Excel
 arquivo_enviado = st.file_uploader("Escolha um arquivo CSV ou Excel", type=["csv", "xlsx"])
 
 if arquivo_enviado is not None:
-    # Identifica a extensão do arquivo enviado
+    # Identifica e lê a extensão do arquivo enviado
     if arquivo_enviado.name.endswith('.csv'):
         df = pd.read_csv(arquivo_enviado)
     else:
         df = pd.read_excel(arquivo_enviado)
     
-    # Validação de segurança das colunas originais
+    # Validação das colunas
     if "Produto" in df.columns and "Vendas" in df.columns:
         
-        # 2. ENRIQUECIMENTO DOS DADOS (O que aprendemos na Fase 2)
+        # 2. PROCESSAMENTO DOS DADOS COM PANDAS
         df["Imposto"] = df["Vendas"] * 0.10
         df["Lucro"] = df["Vendas"] - df["Imposto"]
         
-        # Consolidação e ordenação pelo lucro
         lucro_por_produto = df.groupby("Produto")["Lucro"].sum().reset_index()
         lucro_por_produto = lucro_por_produto.sort_values(by="Lucro", ascending=False)
         
-        # Cálculos de somatórios gerais para os cards
+        # Métricas gerais
         faturamento_geral = df["Vendas"].sum()
-        imposto_geral = df["Imposto"].sum()
         lucro_geral = df["Lucro"].sum()
 
-        # 3. SEÇÃO DE MÉTRICAS (Cards de destaque na tela)
-        st.subheader("📌 Indicadores Financeiros Consolidados")
-        col1, col2, col3 = st.columns(3) # Cria 3 colunas horizontais equilibradas
-        
-        # Exibe os valores formatados no padrão de moeda
+        # 3. SEÇÃO DE MÉRICAS (Cards de destaque)
+        col1, col2 = st.columns(2)
         col1.metric("Faturamento Bruto", f"R$ {faturamento_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        col2.metric("Imposto Retido (10%)", f"R$ {imposto_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        col3.metric("Lucro Líquido Real", f"R$ {lucro_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        col2.metric("Lucro Líquido Real", f"R$ {lucro_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
-        st.markdown("---") # Linha horizontal divisória
-
-        # 4. SEÇÃO GRÁFICA (O que aprendemos na Fase 3)
-        st.subheader("📈 Distribuição de Lucro por Categoria de Produto")
-        
-        # Criação do gráfico utilizando as customizações que vimos
-        fig, ax = plt.subplots(figsize=(10, 4))
-        barras = ax.bar(lucro_por_produto["Produto"], lucro_por_produto["Lucro"], color="#E67E22")
-        
-        # Adiciona a grade de fundo e rótulos
-        ax.set_axisbelow(True)
-        ax.grid(axis='y', linestyle='--', alpha=0.5)
-        ax.bar_label(barras, padding=3, fmt='R$ %.2f')
-        
-        # Estilização moderna removendo as bordas da caixa externa
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.set_ylabel("Lucro (R$)")
-        
-        plt.tight_layout()
-        st.pyplot(fig) # Renderiza o gráfico do Matplotlib na interface web
-        
-        # 5. TABELA DE DADOS ATUALIZADA
         st.markdown("---")
-        st.subheader("👀 Visualização da Tabela de Dados Processada")
+
+        # 4. SEÇÃO GRÁFICA INTERATIVA COM PLOTLY
+        st.subheader("📈 Gráfico Dinâmico: Lucro por Produto")
+        
+        # Criando o gráfico de barras com Plotly Express (Apenas 1 linha de código!)
+        fig = px.bar(
+            lucro_por_produto, 
+            x="Produto", 
+            y="Lucro",
+            text_auto='.2f', # Adiciona os valores em cima das barras automaticamente
+            title="Lucro Total por Categoria",
+            labels={"Lucro": "Lucro Líquido (R$)", "Produto": "Categorias"}, # Muda os nomes dos eixos
+            color="Lucro", # Cria um degradê automático baseado no valor do lucro!
+            color_continuous_scale="Oranges" # Paleta de cores laranja/coral combinando com o post
+        )
+        
+        # Ajustes finos de layout do Plotly para remover linhas desnecessárias
+        fig.update_layout(
+            xaxis_title="Produtos",
+            yaxis_title="Lucro (R$)",
+            coloraxis_showscale=False, # Esconde a barra lateral de legenda do degradê
+            template="plotly_white" # Fundo branco limpo e moderno
+        )
+
+        # Comando exclusivo do Streamlit para renderizar gráficos do Plotly
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # 5. TABELA DE DADOS
+        st.markdown("---")
+        st.subheader("👀 Dados Processados")
         st.dataframe(df, use_container_width=True)
         
     else:
-        st.error("Erro crítico: Verifique se sua planilha possui as colunas 'Produto' e 'Vendas'.")
+        st.error("Erro: O arquivo precisa conter as colunas 'Produto' e 'Vendas'.")
 else:
-    st.info("💡 Pronto para iniciar. Faça o upload de um arquivo para estruturar o painel.")
+    st.info("💡 Aguardando o envio de um arquivo para gerar o painel.")
